@@ -18,9 +18,9 @@ jobs:
 
     - name: Deploy to Remote Server via SSH
       run: |
-        ssh -p 1894 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-        cd /path/to/your/app
-        docker compose down
-        git pull origin main
-        docker compose up -d --build
+        ssh -p 1894 -o StrictHostKeyChecking=no runneruser@10.0.120.17 << 'EOF'
+          cd /path/to/your/project
+          git pull origin main
+          docker compose down
+          docker compose up -d --build
         EOF
