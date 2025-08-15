@@ -2,25 +2,36 @@ name: Build and Deploy via SSH
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]  # ✅ รันทุกครั้งที่ push เข้า main
+  workflow_dispatch:   # ✅ ให้กดรันจากหน้า GitHub ได้ด้วย
 
 jobs:
   build-and-deploy:
-    runs-on: [self-hosted]
+    runs-on: self-hosted
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Create SSH folder
-      run: mkdir -p ~/.ssh
+      run: |
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
 
     - name: Deploy to Remote Server via SSH
+      env:
+        REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+        REMOTE_USER: ${{ secrets.REMOTE_USER }}
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       run: |
-        ssh -p 1894 -o StrictHostKeyChecking=no runneruser@10.0.120.17 << 'EOF'
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST << 'EOF'
           cd /path/to/your/project
-          git pull origin main
+          git pull
           docker compose down
           docker compose up -d --build
         EOF
+
+    - name: Post Checkout code
+      run: echo "✅ Deploy complete"
