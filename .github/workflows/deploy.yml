@@ -7,37 +7,38 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Create SSH folder and key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+    - name: Create SSH folder and key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
 
-      - name: Deploy to Remote Server via SSH
-        run: |
-          ssh -o StrictHostKeyChecking=no -p 1894 ${{ secrets.SSH_USERNAME }}@${{ secrets.REMOTE_HOST }} << 'EOF'
-            set -e
-
-            # ตั้งค่า path และ repo
-            PROJECT_DIR=/home/runneruser/hello-next
-            REPO_URL=https://github.com/DigitalHelathSBH/hello-next.git
-
-            # ลบโฟลเดอร์เดิม (optional ถ้าอยาก clean)
-            rm -rf $PROJECT_DIR
-
-            # Clone repo ใหม่
-            git clone $REPO_URL $PROJECT_DIR
-
-            # ไปที่โฟลเดอร์โปรเจกต์
-            cd $PROJECT_DIR
-
-            # รัน Docker
-            docker compose down || true
-            docker compose up -d --build
-          EOF
+    - name: Deploy to Remote Server via SSH
+      run: |
+        ssh -o StrictHostKeyChecking=no -p 1894 ${{ secrets.SSH_USERNAME }}@${{ secrets.REMOTE_HOST }} << 'EOF'
+          set -e
+          PROJECT_DIR=/home/${{ secrets.SSH_USERNAME }}/hello-next
+          
+          # ลบโปรเจกต์เก่า
+          rm -rf $PROJECT_DIR
+          
+          # Clone ใหม่
+          git clone https://github.com/DigitalHealthSBH/hello-next.git $PROJECT_DIR
+          
+          cd $PROJECT_DIR
+          
+          # Build Docker image
+          docker build -t hello-next .
+          
+          # หยุด container เดิมถ้ามี
+          docker rm -f hello-next || true
+          
+          # Run ใหม่ (map port 3001)
+          docker run -d --name hello-next -p 3001:3001 hello-next
+        EOF
