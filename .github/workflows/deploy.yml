@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create SSH folDer
+      - name: Create SSH folder and key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
@@ -21,6 +21,23 @@ jobs:
 
       - name: Deploy to Remote Server via SSH
         run: |
-          echo "cd /home/runneruser/hello-next
-          docker compose down
-          docker compose up -d --build" | ssh -o StrictHostKeyChecking=no -p 1894 ${{ secrets.SSH_USERNAME }}@${{ secrets.REMOTE_HOST }}
+          ssh -o StrictHostKeyChecking=no -p 1894 ${{ secrets.SSH_USERNAME }}@${{ secrets.REMOTE_HOST }} << 'EOF'
+            set -e
+
+            # ตั้งค่า path และ repo
+            PROJECT_DIR=/home/runneruser/hello-next
+            REPO_URL=https://github.com/DigitalHelathSBH/hello-next.git
+
+            # ลบโฟลเดอร์เดิม (optional ถ้าอยาก clean)
+            rm -rf $PROJECT_DIR
+
+            # Clone repo ใหม่
+            git clone $REPO_URL $PROJECT_DIR
+
+            # ไปที่โฟลเดอร์โปรเจกต์
+            cd $PROJECT_DIR
+
+            # รัน Docker
+            docker compose down || true
+            docker compose up -d --build
+          EOF
